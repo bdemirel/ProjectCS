@@ -51,7 +51,7 @@ def main():
 
     num_processor = 1
     for opt, val in opts:
-        if opt == "-h"
+        if opt == "-h":
         	print "q1.py -p <number_of_processes> -d <date_to_parse>"
         elif opt == "-p":
             num_processor = int (val)
