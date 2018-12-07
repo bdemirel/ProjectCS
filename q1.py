@@ -9,13 +9,28 @@ import re, json, logging
 import glob, sys, getopt
 from multiprocessing import Pool
 
-def parse(avrofile):	
+logger = logging.getLogger('main')
+logger.setLevel(logging.DEBUG)
+
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+fh = logging.FileHandler('q1.log')
+fh.setLevel(logging.DEBUG)
+
+formatter = logging.Formatter('%(asctime)s %(process)d %(levelname)-8s %(message)s')
+ch.setFormatter(formatter)
+fh.setFormatter(formatter)
+
+logger.addHandler(ch)
+logger.addHandler(fh)
+
+def parse(avrofile):
     q_types = ['AAAA', 'A', 'MX']
     r_types = ['AAAA', 'A', 'MX', 'CNAME']
     fields = ['query_type', 'query_name', 'response_name', 'response_type', 'rtt', 'timestamp', 'worker_id', 'ttl', 'status_code', 'ip4_address', 'ip6_address', 'country', 'as', 'as_full', 'cname_name', 'dname_name', 'mx_address', 'mx_preference', 'ns_address', 'soa_mname', 'soa_rname', 'soa_expire']
     datalist = []
-    dcounter = ccounter = 0;
-    logging.info("File started: %s", avrofile)
+    dcounter = ccounter = 0
+    logger.info("File started: %s", avrofile)
     f = open('results/'+avrofile[11:45]+'.json', 'w')
     reader = DataFileReader(open(avrofile, "rb"), DatumReader())
     for data in reader:
@@ -27,7 +42,7 @@ def parse(avrofile):
             for dname in domains:
                 if dname == None:		dname = "None"
                 if (re.search(r'(cdn)|(akamai)|(edge)|(cloudfront)|(cachefly)|(swift)|(fastly)|(llnwd)', dname, re.I)):
-                    logging.info("CDN Domain: %s", dname)
+                    logger.debug("CDN Domain: %s", dname)
                     ccounter += 1
     datalist.insert(0, {'dname_count':dcounter, 'cname_count':ccounter})
     json.dump(datalist, f, indent=2)
@@ -35,18 +50,10 @@ def parse(avrofile):
     reader.close()
 
 def main():
-    logging.basicConfig(
-        format='%(asctime)s %(process)d %(levelname)-8s %(message)s',
-        handlers = [
-            logging.FileHandler("q1.log"),
-            logging.StreamHandler()],
-        level=logging.INFO,
-        datefmt='%Y-%m-%d %H:%M:%S')
-
     try:
         opts, args = getopt.getopt(sys.argv[1:], "hp:d:")
     except getopt.GetoptError as err:
-        logging.error(str(err))
+        logger.error(str(err))
         sys.exit(1)
 
     num_processor = 1
@@ -58,10 +65,10 @@ def main():
         elif opt == "-d":
         	folder = val
         else:
-            assert False, "unhandled opt"   
-	logging.info("Number of processes: %d", num_processor)
-    pool = Pool(processes=num_processor)
-    pool.map(parse, glob.glob(folder+'/*.avro'))
+            assert False, "unhandled opt"
+    logger.info("Number of processes: %d", num_processor)
+    pool = Pool(processes=num_processor, maxtasksperchild=1)
+    pool.map(parse, glob.glob(folder+'/*.avro'), chunksize=1)
 
 if __name__ == "__main__":
-    main()	
+	main()
