@@ -59,7 +59,6 @@ def parse(avrofile):
     datalist.insert(0, {'dname_count':dcounter, 'cname_count':ccounter})
     json.dump(datalist, f, indent=2)
     f.close()
-    reader.close()
 
 def main():
     try:
