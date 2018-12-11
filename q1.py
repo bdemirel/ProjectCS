@@ -2,12 +2,13 @@
     q1.py -p n -d YYYY-MM-DD
 """
 
-import avro.schema
-from avro.datafile import DataFileReader, DataFileWriter
-from avro.io import DatumReader, DatumWriter
 import re, json, logging
-import glob, sys, getopt
+import glob, sys, getopt, os
 from multiprocessing import Pool
+
+sys.path.append(os.path.expanduser('~/.local/lib/python3.6/site-packages'))
+from fastavro import block_reader
+import tldextract
 
 logger = logging.getLogger('main')
 logger.setLevel(logging.DEBUG)
@@ -25,25 +26,36 @@ logger.addHandler(ch)
 logger.addHandler(fh)
 
 def parse(avrofile):
-    q_types = ['AAAA', 'A', 'MX']
-    r_types = ['AAAA', 'A', 'MX', 'CNAME']
-    fields = ['query_type', 'query_name', 'response_name', 'response_type', 'rtt', 'timestamp', 'worker_id', 'ttl', 'status_code', 'ip4_address', 'ip6_address', 'country', 'as', 'as_full', 'cname_name', 'dname_name', 'mx_address', 'mx_preference', 'ns_address', 'soa_mname', 'soa_rname', 'soa_expire']
+    q_types = ['AAAA', 'A']
+    r_types = ['AAAA', 'A', 'CNAME']
+    fields = ['query_type', 'query_name', 'response_name', 'response_type', 'rtt', 'timestamp', 'worker_id', 'ttl', 'status_code', 'ip4_address', 'ip6_address', 'country', 'as_full', 'cname_name', 'dname_name']
     datalist = []
+    cdns = {}
     dcounter = ccounter = 0
     logger.info("File started: %s", avrofile)
     f = open('results/'+avrofile[11:45]+'.json', 'w')
-    reader = DataFileReader(open(avrofile, "rb"), DatumReader())
-    for data in reader:
-        if (data['query_type'] in q_types) and (data['response_type'] in r_types):
-            dcounter += 1
-            filtd = { newkey: data.get(newkey) for newkey in fields }
-            datalist.append(filtd)
-            domains = [data['query_name'], data['response_name']]
-            for dname in domains:
-                if dname == None:		dname = "None"
-                if (re.search(r'(cdn)|(akamai)|(edge)|(cloudfront)|(cachefly)|(swift)|(fastly)|(llnwd)', dname, re.I)):
-                    logger.debug("CDN Domain: %s", dname)
-                    ccounter += 1
+    reader = block_reader(open(avrofile, "rb"))
+    for block in reader:
+        for data in block:
+            if (data['query_type'] in q_types) and (data['response_type'] in r_types):
+                dcounter += 1
+                filtd = { newkey: data.get(newkey) for newkey in fields }
+                filtd['_id'] = dcounter
+                filtd['cdn'] = 0
+                if (data['response_type'] == "CNAME"):
+                    d_ext = tldextract.extract(data['query_name'])
+                    c_ext = tldextract.extract(data['cname_name'])
+                    if (d_ext[1] != c_ext[1]):
+                        ccounter += 1
+                        filtd['cdn'] = 1
+                        cdomain = c_ext[1]+"."+c_ext[2]
+                        logger.debug("CDN Domain Found: %s", data['cname_name'])
+                        if (cdomain not in cdns):
+                            cdns[cdomain] = 0
+                        cdns[cdomain] += 1
+                datalist.append(filtd)
+                filtd.clear()
+    datalist.insert(0, cdns)
     datalist.insert(0, {'dname_count':dcounter, 'cname_count':ccounter})
     json.dump(datalist, f, indent=2)
     f.close()
@@ -59,7 +71,7 @@ def main():
     num_processor = 1
     for opt, val in opts:
         if opt == "-h":
-        	print "q1.py -p <number_of_processes> -d <date_to_parse>"
+        	print("q1.py -p <number_of_processes> -d <date_to_parse>")
         elif opt == "-p":
             num_processor = int (val)
         elif opt == "-d":
