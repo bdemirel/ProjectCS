@@ -30,7 +30,7 @@ logger.addHandler(fh)
 def parse(avrofile):
     q_types = ['AAAA', 'A']
     r_types = ['AAAA', 'A', 'CNAME']
-    fields = ['query_type', 'query_name', 'response_name', 'response_type', 'rtt', 'timestamp', 'worker_id', 'ttl', 'status_code', 'ip4_address', 'ip6_address', 'country', 'as_full', 'cname_name', 'dname_name']
+    fields = ['query_type', 'query_name', 'response_name', 'response_type', 'rtt', 'timestamp', 'worker_id', 'ttl', 'status_code', 'ip4_address', 'ip6_address', 'country', 'as_full', 'cname_name', 'dname_name', 'response_ttl', 'soa_serial']
     datalist = []
     cdns = {}
     dcounter = ccounter = 0
@@ -60,7 +60,6 @@ def parse(avrofile):
 		                        cdns[cdomain] = 0
 		                    cdns[cdomain] += 1
 		            datalist.append(filtd)
-		            filtd.clear()
     datalist.insert(0, cdns)
     datalist.insert(0, {'dname_count':dcounter, 'cname_count':ccounter})
     json.dump(datalist, f, indent=2)
