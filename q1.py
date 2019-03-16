@@ -24,7 +24,7 @@ logger.addHandler(ch)
 logger.addHandler(fh)
 
 #file parsing
-def parse(avrofile):
+def parse(dataset, parsedate, avrofile):
     q_types = ['AAAA', 'A']
     r_types = ['AAAA', 'A', 'CNAME']
     fields = ['query_type', 'query_name', 'response_name', 'response_type', 'rtt', 'timestamp', 'worker_id', 'status_code', 'ip4_address', 'ip6_address', 'country', 'as_full', 'cname_name', 'dname_name', 'response_ttl', 'soa_serial']
@@ -32,13 +32,11 @@ def parse(avrofile):
     cdns = {}
     dcounter = ccounter = 0
     logger.info("File started: %s", avrofile)
-    f = open('results/'+avrofile[15:-4]+'json', 'w')
+    f = open(os.path.join('results', dataset, parsedate, os.path.basename(avrofile)), 'w')
     reader = block_reader(open(avrofile, "rb"))
     for block in reader:
         for data in block:
-        	sweden = True
-        	if avrofile[15:22] == "alexa1m":
-        		sweden = False
+        	sweden = True if dataset == "alexa1m" else False
         	d_ext = tldextract.extract(data['query_name'])
         	if (sweden == True and d_ext[2] == "se") or (sweden == False):
 		        if (data['query_type'] in q_types) and (data['response_type'] in r_types):
@@ -90,7 +88,10 @@ def main():
         subprocess.run(['./routine.sh', parsedate.strftime("%Y"), parsedate.strftime("%d %b"), dataset], check=True)
         logger.info("Number of processes: %d", num_processor)
         pool = Pool(processes=num_processor, maxtasksperchild=1)
-        pool.map(parse, glob.glob("/data/bdemirel/"+dataset+"/"+parsedate.strftime("%Y%m%d")+"/*.avro"), chunksize=1)
+        argset = []
+        for file in glob.glob("/data/bdemirel/"+dataset+"/"+parsedate.strftime("%Y%m%d")+"/*.avro"):
+            argset.append((dataset, parsedate.strftime("%Y%m%d"), file))
+        pool.starmap(parse, argset, chunksize=1)
         logger.info("Day "+str(iteration+1)+" successfully finished!")
         if parsedate.day == 1:
             parsedate.replace(day=15)
