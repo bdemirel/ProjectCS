@@ -2,7 +2,7 @@
 #    q1.py (-a) -p n -d YYYY-MM-DD
 
 #imports
-import re, json, logging, subprocess, glob, sys, getopt, os, datetime
+import re, json, logging, subprocess, glob, sys, getopt, os, datetime, getpass
 from multiprocessing import Pool
 from fastavro import block_reader
 import tldextract
@@ -89,7 +89,7 @@ def main():
         logger.info("Number of processes: %d", num_processor)
         pool = Pool(processes=num_processor, maxtasksperchild=1)
         argset = []
-        for file in glob.glob("/data/bdemirel/"+dataset+"/"+parsedate.strftime("%Y%m%d")+"/*.avro"):
+        for file in glob.glob(os.path.join("/data", getpass.getUser(), dataset, parsedate.strftime("%Y%m%d"), "/*.avro"):
             argset.append((dataset, parsedate.strftime("%Y%m%d"), file))
         pool.starmap(parse, argset, chunksize=1)
         logger.info("Day "+str(iteration+1)+" successfully finished!")
