@@ -89,15 +89,15 @@ def main():
         logger.info("Number of processes: %d", num_processor)
         pool = Pool(processes=num_processor, maxtasksperchild=1)
         argset = []
-        for file in glob.glob(os.path.join("/data", getpass.getUser(), dataset, parsedate.strftime("%Y%m%d"), "/*.avro"):
+        for file in glob.glob(os.path.join("/data", getpass.getuser(), dataset, parsedate.strftime("%Y%m%d"), "*.avro")):
             argset.append((dataset, parsedate.strftime("%Y%m%d"), file))
         pool.starmap(parse, argset, chunksize=1)
         logger.info("Day "+str(iteration+1)+" successfully finished!")
         if parsedate.day == 1:
-            parsedate.replace(day=15)
+            parsedate = parsedate.replace(day=15)
         elif parsedate.day == 15:
-            parsedate.replace(day=1)
-        parsedate.replace(month=parsedate.month+1)
+            parsedate = parsedate.replace(day=1)
+            parsedate = parsedate.replace(month=parsedate.month+1)
     logger.info("Execution successfully finished!")
 
 if __name__ == "__main__":
