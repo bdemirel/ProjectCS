@@ -32,7 +32,7 @@ def parse(dataset, parsedate, avrofile):
     cdns = {}
     dcounter = ccounter = 0
     logger.info("File started: %s", avrofile)
-    f = open(os.path.join('results', dataset, parsedate, os.path.basename(avrofile)), 'w')
+    f = open(os.path.join('results', dataset, parsedate, os.path.splitext(os.path.basename(avrofile))[0]+'.json'), 'w')
     reader = block_reader(open(avrofile, "rb"))
     for block in reader:
         for data in block:
@@ -97,7 +97,11 @@ def main():
             parsedate = parsedate.replace(day=15)
         elif parsedate.day == 15:
             parsedate = parsedate.replace(day=1)
-            parsedate = parsedate.replace(month=parsedate.month+1)
+            if parsedate.month == 12:
+                parsedate = parsedate.replace(month=1)
+                parsedate = parsedate.replace(year=parsedate.year+1)
+            else
+                parsedate = parsedate.replace(month=parsedate.month+1)
     logger.info("Execution successfully finished!")
 
 if __name__ == "__main__":
