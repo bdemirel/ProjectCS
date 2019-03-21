@@ -1,5 +1,5 @@
 
-#    q1.py (-a) -p n -d YYYY-MM-DD
+#    p1.py (-a) -p n -d YYYY-MM-DD -r n
 
 #imports
 import re, json, logging, subprocess, glob, sys, getopt, os, datetime, getpass
@@ -13,7 +13,7 @@ logger.setLevel(logging.DEBUG)
 
 ch = logging.StreamHandler()
 ch.setLevel(logging.INFO)
-fh = logging.FileHandler('q1.log')
+fh = logging.FileHandler('p1.log')
 fh.setLevel(logging.DEBUG)
 
 formatter = logging.Formatter('%(asctime)s %(process)d %(levelname)-8s %(message)s')
@@ -36,19 +36,19 @@ def parse(dataset, parsedate, avrofile):
     reader = block_reader(open(avrofile, "rb"))
     for block in reader:
         for data in block:
-        	sweden = True if dataset == "alexa1m" else False
+        	sweden = False if dataset == "alexa1m" else True
         	d_ext = tldextract.extract(data['query_name'])
         	if (sweden == True and d_ext[2] == "se") or (sweden == False):
 		        if (data['query_type'] in q_types) and (data['response_type'] in r_types):
 		            dcounter += 1
 		            filtd = { newkey: data.get(newkey) for newkey in fields }
 		            filtd['_id'] = dcounter
-		            filtd['cdn'] = 0
+		            filtd['_cdn'] = 0
 		            if data['response_type'] == "CNAME":   
 		                c_ext = tldextract.extract(data['cname_name'])
 		                if d_ext[1] != c_ext[1]:
 		                    ccounter += 1
-		                    filtd['cdn'] = 1
+		                    filtd['_cdn'] = 1
 		                    cdomain = c_ext[1]+"."+c_ext[2]
 		                    logger.debug("CDN Domain Found: %s", data['cname_name'])
 		                    if cdomain not in cdns:
@@ -73,7 +73,7 @@ def main():
     repeat = 1
     for opt, val in opts:
         if opt == "-h":
-            print("q1.py (-a) -p <number_of_processes> -d <date_to_parse> (-r <number_of_repetitions>)")
+            print("p1.py (-a) -p <number_of_processes> -d <date_to_parse> (-r <number_of_repetitions>)")
             sys.exit(0)
         elif opt == "-a":
         	dataset = "alexa1m"
@@ -100,7 +100,7 @@ def main():
             if parsedate.month == 12:
                 parsedate = parsedate.replace(month=1)
                 parsedate = parsedate.replace(year=parsedate.year+1)
-            else
+            else:
                 parsedate = parsedate.replace(month=parsedate.month+1)
     logger.info("Execution successfully finished!")
 
