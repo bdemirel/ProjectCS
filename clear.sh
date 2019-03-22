@@ -8,8 +8,6 @@
 # $1 = 'YYYYmmdd'
 # $2 = 'dateset'
 
-echo $1
-
 #Compress results
 tar -cvzf "/data/$USER/results/$2/$1.tar.gz" "/data/$USER/results/$2/$1"
 
@@ -20,7 +18,7 @@ then
 fi
 
 #remove old data folder if exists
-if [ -d "/data/$USER/$2/$$1" ]
+if [ -d "/data/$USER/$2/$1" ]
 then
 	rm -r "/data/$USER/$2/$1"
 fi
