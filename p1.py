@@ -32,32 +32,32 @@ def parse(dataset, parsedate, avrofile):
     cdns = {}
     dcounter = ccounter = 0
     logger.info("File started: %s", avrofile)
-    f = open(os.path.join('results', dataset, parsedate, os.path.splitext(os.path.basename(avrofile))[0]+'.json'), 'w')
+    f = open(os.path.join('/data', getpass.getuser(), 'results', dataset, parsedate, os.path.splitext(os.path.basename(avrofile))[0]+'.json'), 'w')
     reader = block_reader(open(avrofile, "rb"))
     for block in reader:
         for data in block:
-        	sweden = False if dataset == "alexa1m" else True
-        	d_ext = tldextract.extract(data['query_name'])
-        	if (sweden == True and d_ext[2] == "se") or (sweden == False):
-		        if (data['query_type'] in q_types) and (data['response_type'] in r_types):
-		            dcounter += 1
-		            filtd = { newkey: data.get(newkey) for newkey in fields }
-		            filtd['_id'] = dcounter
-		            filtd['_cdn'] = 0
-		            if data['response_type'] == "CNAME":   
-		                c_ext = tldextract.extract(data['cname_name'])
-		                if d_ext[1] != c_ext[1]:
-		                    ccounter += 1
-		                    filtd['_cdn'] = 1
-		                    cdomain = c_ext[1]+"."+c_ext[2]
-		                    logger.debug("CDN Domain Found: %s", data['cname_name'])
-		                    if cdomain not in cdns:
-		                        cdns[cdomain] = 0
-		                    cdns[cdomain] += 1
-		            datalist.append(filtd)
+            sweden = False if dataset == "alexa1m" else True
+            d_ext = tldextract.extract(data['query_name'])
+            if (sweden == True and d_ext[2] == "se") or (sweden == False):
+                if (data['query_type'] in q_types) and (data['response_type'] in r_types):
+                    dcounter += 1
+                    filtd = { newkey: data.get(newkey) for newkey in fields }
+                    filtd['_id'] = dcounter
+                    filtd['_cdn'] = 0
+                    if data['response_type'] == "CNAME":   
+                        c_ext = tldextract.extract(data['cname_name'])
+                        if d_ext[1] != c_ext[1]:
+                            ccounter += 1
+                            filtd['_cdn'] = 1
+                            cdomain = c_ext[1]+"."+c_ext[2]
+                            logger.debug("CDN Domain Found: %s", data['cname_name'])
+                            if cdomain not in cdns:
+                                cdns[cdomain] = 0
+                            cdns[cdomain] += 1
+                    datalist.append(filtd)
     datalist.insert(0, cdns)
     datalist.insert(0, {'dname_count':dcounter, 'cname_count':ccounter})
-    json.dump(datalist, f, indent=2)
+    json.dump(datalist, f, separators=(',', ':'))
     f.close()
 
 #main
@@ -76,22 +76,23 @@ def main():
             print("p1.py (-a) -p <number_of_processes> -d <date_to_parse> (-r <number_of_repetitions>)")
             sys.exit(0)
         elif opt == "-a":
-        	dataset = "alexa1m"
+            dataset = "alexa1m"
         elif opt == "-p":
             num_processor = int (val)
         elif opt == "-d":
-        	parsedate = datetime.date(int (val[0:4]), int (val[5:7]), int (val[8:10]))
+            parsedate = datetime.date(int (val[0:4]), int (val[5:7]), int (val[8:10]))
         elif opt == "-r":
             repeat = int (val)
     
     for iteration in range(repeat):
-        subprocess.run(['./routine.sh', parsedate.strftime("%Y"), parsedate.strftime("%d %b"), dataset], check=True)
+        subprocess.run(['./create.sh', parsedate.strftime("%Y"), parsedate.strftime("%d %b"), dataset], check=True)
         logger.info("Number of processes: %d", num_processor)
         pool = Pool(processes=num_processor, maxtasksperchild=1)
         argset = []
         for file in glob.glob(os.path.join("/data", getpass.getuser(), dataset, parsedate.strftime("%Y%m%d"), "*.avro")):
             argset.append((dataset, parsedate.strftime("%Y%m%d"), file))
         pool.starmap(parse, argset, chunksize=1)
+        subprocess.run(['./clear.sh', parsedate.strftime("%Y%m%d"), dataset], check=True)
         logger.info("Day "+str(iteration+1)+" successfully finished!")
         if parsedate.day == 1:
             parsedate = parsedate.replace(day=15)
