@@ -46,6 +46,8 @@ def parse(dyear, conn, jsonfile):
 				for site, cnt in row:
 					cursor.execute(stmtCDN, site, cnt)
 	conn.close()
+	jf.close()
+	os.remove(jsonfile)
 	return (dcount, ccount)
 
 def main():
@@ -81,9 +83,8 @@ def main():
 
 	#set arguments, start and run multiprocessing pool
 	pool = Pool(processes=12, maxtasksperchild=1)
-	for batch in batcher(glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, str(parseyear)+"-*", "*.json")), 12):
-		#TODO Write bash script
-		subprocess.run(['./decompression.sh'], check=True)
+	for batch in batcher(glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, "parse", str(parseyear)+"-*", "*.json")), 12):
+		subprocess.run(['./decompression.sh', parseyear, dataset], check=True)
 		arglist = []
 		for file in batch:
 			conn = dbpool.get_connection()
