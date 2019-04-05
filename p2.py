@@ -1,6 +1,8 @@
 import mysql.connector as DBCon, logging, sys, glob, getpass, json, getopt, subprocess, itertools, os
 from mysql.connector import pooling
+from mysql.connector import Error
 from multiprocessing import Pool
+from itertools import zip_longest
 
 #logging
 logger = logging.getLogger('main')
@@ -18,44 +20,51 @@ fh.setFormatter(formatter)
 logger.addHandler(ch)
 logger.addHandler(fh)
 
-#from: https://stackoverflow.com/questions/28022223/how-to-iterate-over-a-dictionary-n-key-value-pairs-at-a-time by @georg
-def batcher(it, size):
-    it = iter(it)
-    while True:
-        p = tuple(itertools.islice(it, size))
-        if not p:
-            break
-        yield p
+#start database pool
+try:
+	global dbpool
+	dbpool = DBCon.pooling.MySQLConnectionPool(pool_name="dbpool", pool_size=7, option_files='mysql_options.cnf')	
+except:
+	logger.info("Cannot connect to MySQL!")
+	#logger.info(err)
+	sys.exit(1)
+logger.info("DB Connection Pool started")
 
-def parse(dyear, conn, jsonfile):
+def parse(dyear, jsonfile):
 	logger.info("File started: %s", jsonfile)
-	cursor = conn.cursor(prepared=True)
-	stmtCDN = "INSERT INTO cdn"+dyear+" (`domain`, `count`) VALUES (?, ?)"
-	cursor.execute(stmtCDN)
-	stmtAll = "INSERT INTO "+dyear+" (query_name, query_type, response_name, response_type, cname, dname, timestamp, ipv4, ipv6, as, country, cdn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	cursor.execute(stmtAll)
-	with open(jsonfile) as jf:
-		contents = json.load(jf)
-		for row in contents:
-			if row["_id"]:
-				cursor.execute(stmtAll, row["query_name"], row["query_type"], row["response_name"], row["response_type"], row["cname_name"], row["dname_name"], row["timestamp"]/1000, row["ip4_address"], row["ip6_address"], row["as_full"], row["country"], row["_cdn"])
-			elif row["dname_count"]:
-				dcount = row["dname_count"]
-				ccount = row["cname_count"]
-			else:
-				for site, cnt in row:
-					cursor.execute(stmtCDN, site, cnt)
-	conn.close()
-	jf.close()
-	os.remove(jsonfile)
-	return (dcount, ccount)
+	conn = dbpool.get_connection()
+	print(conn.is_connected())
+	if (not conn.is_connected()):
+		return(0, 0)
+	else:
+		cursor = conn.cursor(prepared=True)
+		
+		stmtCDN = "INSERT INTO cdn"+str(dyear)+" (`domain`, `count`) VALUES (?, ?)"
+		cursor.execute(stmtCDN)
+		stmtAll = "INSERT INTO `"+str(dyear)+"` (query_name, query_type, response_name, response_type, cname, dname, timestamp, ipv4, ipv6, as_full, country, cdn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+		cursor.execute(stmtAll)
+		with open(jsonfile) as jf:
+			contents = json.load(jf)
+			for row in contents:
+				if "_id" in row:
+					cursor.execute(stmtAll, (row["query_name"], row["query_type"], row["response_name"], row["response_type"], row["cname_name"], row["dname_name"], row["timestamp"]/1000, row["ip4_address"], row["ip6_address"], row["as_full"], row["country"], row["_cdn"]))
+				elif "dname_count" in row:
+					dcount = row["dname_count"]
+					ccount = row["cname_count"]
+				else:
+					for site, cnt in row.items():
+						cursor.execute(stmtCDN, (site, cnt))
+		conn.close()
+		jf.close()
+		os.remove(jsonfile)
+		return (dcount, ccount)
 
 def main():
 	#parse commandline arguments
 	try:
-		opts, args = getopt.getopt(sys.argv[1:], "hay:")
+		opts, args = getopt.getopt(sys.argv[1:], "hoy:")
 	except getopt.GetoptError as err:
-		logger.error(str(err))
+		logger.info(str(err))
 		sys.exit(1)
 	
 	dataset = "alexa1m"
@@ -68,28 +77,28 @@ def main():
 		elif opt == "-y":
 			parseyear = int (val)
 	if not 'parseyear' in locals():
-		logger.error("Missing year!")
+		logger.info("Missing year!")
 		sys.exit(1)
-	
-	#start database pool
-	try:
-		dbpool = DBCon.pooling.MySQLConnectionPool(pool_name="dbpool", pool_size=12)	
-		dbpool.set_config(option_files='mysql_options.cnf')
-	except DBCon.Error as err:
-		logger.error("Cannot connect to MySQL!")
-		logger.error(err)
-		sys.exit(1)
-	logger.info("DB Connection Pool started")
 
 	#set arguments, start and run multiprocessing pool
-	pool = Pool(processes=12, maxtasksperchild=1)
-	for batch in batcher(glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, "parse", str(parseyear)+"-*", "*.json")), 12):
-		subprocess.run(['./decompression.sh', parseyear, dataset], check=True)
+	pool = Pool(processes=7, maxtasksperchild=1)
+	subprocess.run(['./decompression.sh', str(parseyear), dataset], check=True)
+	results = []
+	dcount = ccount = 0
+	while True:
+		batch = glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, "parse", "*.json"))[:7]
+		if batch == []:
+			break
+		arglist = [(parseyear, x) for x in batch]
+		results += pool.starmap(parse, arglist, 1)
+		subprocess.run(['./decompression.sh', str(parseyear), dataset], check=True)
+		sys.exit(0)
+	"""for batch in batcher(glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, "parse", "*.json")), 12):
 		arglist = []
 		for file in batch:
-			conn = dbpool.get_connection()
-			arglist.append((parseyear, conn, file))
-		results += pool.starmap(parse, arglist, 1)
+			arglist.append((parseyear, file))
+		pool.starmap(parse, arglist, 1)
+		subprocess.run(['./decompression.sh', str(parseyear), dataset], check=True)"""
 	for dnames, cnames in results:
 		dcount += dnames
 		ccount += cnames
