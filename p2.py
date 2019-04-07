@@ -19,7 +19,7 @@ logger.addHandler(fh)
 
 #start database connection
 try:
-	conn = DBCon.connect(option_files="mysql_options.cnf")
+	conn = DBCon.connect(option_files="mysql_options.cnf", use_pure=True)
 except Error as err:
 	logger.info("Cannot connect to MySQL!")
 	logger.Error(str(err))
@@ -61,9 +61,9 @@ while True:
 	
 	#prepare db statements
 	cursor = conn.cursor(prepared=True)
-	stmtCDN = "INSERT INTO cdn"+str(parseyear)+" (`domain`, `count`) VALUES (?, ?)"
+	stmtCDN = "INSERT INTO Thesis.cdn"+str(parseyear)+" (`domain`, `count`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `count` = `count` + ?"
 	cursor.execute(stmtCDN)
-	stmtAll = "INSERT INTO `"+str(parseyear)+"` (query_name, query_type, response_name, response_type, cname, dname, timestamp, ipv4, ipv6, as_full, country, cdn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	stmtAll = "INSERT INTO Thesis.`"+str(parseyear)+"` (query_name, query_type, response_name, response_type, cname, dname, timestamp, ipv4, ipv6, as_full, country, cdn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	cursor.execute(stmtAll)
 
 	#process the files
@@ -79,9 +79,11 @@ while True:
 					ccount += row["cname_count"]
 				else:
 					for site, cnt in row.items():
-						cursor.execute(stmtCDN, (site, cnt))
+						cursor.execute(stmtCDN, (site, cnt, cnt))
 		jf.close()
 		os.remove(jsonfile)
+	conn.commit()
+	cursor.close()
 
 #close connection and print results
 conn.close()
