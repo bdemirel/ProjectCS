@@ -1,5 +1,5 @@
-import mysql.connector as DBCon, logging, sys, glob, getpass, json, getopt, subprocess, os
-from mysql.connector import Error
+import sqlite3 as DBCon, logging, sys, glob, getpass, json, getopt, subprocess, os
+from sqlite3 import Error
 
 #logging
 logger = logging.getLogger('main')
@@ -19,12 +19,12 @@ logger.addHandler(fh)
 
 #start database connection
 try:
-	conn = DBCon.connect(option_files="mysql_options.cnf", use_pure=True)
+	conn = DBCon.connect("bdemirel.db")
 except Error as err:
-	logger.info("Cannot connect to MySQL!")
-	logger.Error(str(err))
+	logger.error("Cannot connect to database!")
+	logger.error(err)
 	sys.exit(1)
-logger.info("DB Connection started")
+logger.info("Database Connection started")
 
 #parse commandline arguments
 try:
@@ -61,7 +61,7 @@ while True:
 	
 	#prepare db statements
 	cursor = conn.cursor(prepared=True)
-	stmtCDN = "INSERT INTO Thesis.cdn"+str(parseyear)+" (`domain`, `count`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `count` = `count` + ?"
+	stmtCDN = "INSERT INTO Thesis.cdn"+str(parseyear)+" (`domain`, `count`) VALUES (?, ?) ON CONFLICT (`domain`) DO UPDATE SET `count` = `count` + ?"
 	cursor.execute(stmtCDN)
 	stmtAll = "INSERT INTO Thesis.`"+str(parseyear)+"` (query_name, query_type, response_name, response_type, cname, dname, timestamp, ipv4, ipv6, as_full, country, cdn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 	cursor.execute(stmtAll)
