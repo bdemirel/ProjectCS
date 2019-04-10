@@ -19,7 +19,7 @@ logger.addHandler(fh)
 
 #start database connection
 try:
-	conn = DBCon.connect("bdemirel.db")
+	conn = DBCon.connect(os.path.join("/data", getpass.getuser(), "bdemirel.db"))
 except Error as err:
 	logger.error("Cannot connect to database!")
 	logger.error(err)
@@ -53,18 +53,18 @@ while True:
 	#check for files
 	batch = glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, "parse", "*.json"))
 	if batch == []:
-		if glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, str(parseyear)+"-*.tar.gz")) != []:
+		if glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, str(parseyear)+"*.tar.gz")) != []:
 			subprocess.run(['./decompression.sh', str(parseyear), dataset], check=True)
 			batch = glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, "parse", "*.json"))
 		else:
 			break
 	
 	#prepare db statements
-	cursor = conn.cursor(prepared=True)
+	cursor = conn.cursor()
 	stmtCDN = "INSERT INTO Thesis.cdn"+str(parseyear)+" (`domain`, `count`) VALUES (?, ?) ON CONFLICT (`domain`) DO UPDATE SET `count` = `count` + ?"
-	cursor.execute(stmtCDN)
+	stmtCheck = "SELECT rowid FROM Thesis.cdn"+str(parseyear)+" WHERE `domain` = ?"
+	stmtUpdate = "UPDATE Thesis.cdn"+str(parseyear)+" SET `count` = ? WHERE `rowid` = ?"
 	stmtAll = "INSERT INTO Thesis.`"+str(parseyear)+"` (query_name, query_type, response_name, response_type, cname, dname, timestamp, ipv4, ipv6, as_full, country, cdn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
-	cursor.execute(stmtAll)
 
 	#process the files
 	for jsonfile in batch:
@@ -79,7 +79,12 @@ while True:
 					ccount += row["cname_count"]
 				else:
 					for site, cnt in row.items():
-						cursor.execute(stmtCDN, (site, cnt, cnt))
+						cursor.execute(stmtCheck, site)
+						rowid = cursor.fetchone()
+						if  rowid == None:
+							cursor.execute(stmtCDN, (site, cnt, cnt))
+						else:
+							cursor.execute(stmtUpdate, (cnt, rowid))
 		jf.close()
 		os.remove(jsonfile)
 	conn.commit()
