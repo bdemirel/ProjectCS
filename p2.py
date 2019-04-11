@@ -61,10 +61,10 @@ while True:
 	
 	#prepare db statements
 	cursor = conn.cursor()
-	stmtCDN = "INSERT INTO Thesis.cdn"+str(parseyear)+" (`domain`, `count`) VALUES (?, ?) ON CONFLICT (`domain`) DO UPDATE SET `count` = `count` + ?"
-	stmtCheck = "SELECT rowid FROM Thesis.cdn"+str(parseyear)+" WHERE `domain` = ?"
-	stmtUpdate = "UPDATE Thesis.cdn"+str(parseyear)+" SET `count` = ? WHERE `rowid` = ?"
-	stmtAll = "INSERT INTO Thesis.`"+str(parseyear)+"` (query_name, query_type, response_name, response_type, cname, dname, timestamp, ipv4, ipv6, as_full, country, cdn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	stmtCDN = "INSERT INTO cdn"+str(parseyear)+" (`domain`, `count`) VALUES (?, ?)"
+	stmtCheck = "SELECT rowid FROM cdn"+str(parseyear)+" WHERE `domain` = ?"
+	stmtUpdate = "UPDATE cdn"+str(parseyear)+" SET `count` = ? WHERE `rowid` = ?"
+	stmtAll = "INSERT INTO `"+str(parseyear)+"` (query_name, query_type, response_name, response_type, cname, dname, timestamp, ipv4, ipv6, as_full, country, cdn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	#process the files
 	for jsonfile in batch:
@@ -79,12 +79,12 @@ while True:
 					ccount += row["cname_count"]
 				else:
 					for site, cnt in row.items():
-						cursor.execute(stmtCheck, site)
+						cursor.execute(stmtCheck, (site,))
 						rowid = cursor.fetchone()
 						if  rowid == None:
-							cursor.execute(stmtCDN, (site, cnt, cnt))
+							cursor.execute(stmtCDN, (site, cnt))
 						else:
-							cursor.execute(stmtUpdate, (cnt, rowid))
+							cursor.execute(stmtUpdate, (cnt, rowid[0]))
 		jf.close()
 		os.remove(jsonfile)
 	conn.commit()
