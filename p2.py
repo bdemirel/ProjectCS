@@ -49,12 +49,14 @@ if not 'parseyear' in locals():
 #set variables and start processing
 results = []
 dcount = ccount = 0
+procdate = None
 while True:
 	#check for files
 	batch = glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, "parse", "*.json"))
 	if batch == []:
 		if glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, str(parseyear)+"*.tar.gz")) != []:
-			subprocess.run(['./decompression.sh', str(parseyear), dataset], check=True)
+			proc = subprocess.run(['./decompression.sh', str(parseyear), dataset], check=True, universal_newlines=True)
+			procdate = proc.stdout[:-7]
 			batch = glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, "parse", "*.json"))
 		else:
 			break
@@ -64,7 +66,7 @@ while True:
 	stmtCDN = "INSERT INTO cdn"+str(parseyear)+" (`domain`, `count`) VALUES (?, ?)"
 	stmtCheck = "SELECT rowid FROM cdn"+str(parseyear)+" WHERE `domain` = ?"
 	stmtUpdate = "UPDATE cdn"+str(parseyear)+" SET `count` = ? WHERE `rowid` = ?"
-	stmtAll = "INSERT INTO `"+str(parseyear)+"` (query_name, query_type, response_name, response_type, cname, dname, timestamp, ipv4, ipv6, as_full, country, cdn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+	stmtAll = "INSERT INTO `"+str(parseyear)+"` (query_name, query_type, response_name, response_type, cname, dname, parsedate, timestamp, ipv4, ipv6, as_full, country, cdn) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 
 	#process the files
 	for jsonfile in batch:
@@ -73,7 +75,7 @@ while True:
 			contents = json.load(jf)
 			for row in contents:
 				if "_id" in row:
-					cursor.execute(stmtAll, (row["query_name"], row["query_type"], row["response_name"], row["response_type"], row["cname_name"], row["dname_name"], row["timestamp"]/1000, row["ip4_address"], row["ip6_address"], row["as_full"], row["country"], row["_cdn"]))
+					cursor.execute(stmtAll, (row["query_name"], row["query_type"], row["response_name"], row["response_type"], row["cname_name"], row["dname_name"], procdate, row["timestamp"]/1000, row["ip4_address"], row["ip6_address"], row["as_full"], row["country"], row["_cdn"]))
 				elif "dname_count" in row:
 					dcount += row["dname_count"]
 					ccount += row["cname_count"]
