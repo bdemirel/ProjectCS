@@ -55,8 +55,8 @@ while True:
 	batch = glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, "parse", "*.json"))
 	if batch == []:
 		if glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, str(parseyear)+"*.tar.gz")) != []:
-			proc = subprocess.run(['./decompression.sh', str(parseyear), dataset], check=True, universal_newlines=True)
-			procdate = proc.stdout[:-7]
+			proc = subprocess.run(['./decompression.sh', str(parseyear), dataset], check=True, universal_newlines=True, stdout=subprocess.PIPE)
+			procdate = proc.stdout[:8]
 			batch = glob.glob(os.path.join("/data", getpass.getuser(), "results", dataset, "parse", "*.json"))
 		else:
 			break
@@ -89,7 +89,7 @@ while True:
 							cursor.execute(stmtUpdate, (cnt, rowid[0]))
 		jf.close()
 		os.remove(jsonfile)
-	conn.commit()
+		conn.commit()
 	cursor.close()
 
 #close connection and print results
