@@ -71,26 +71,27 @@ def main():
     
     pool = Pool(processes=len(stmts), maxtasksperchild=1)
     results = pool.map(query, stmts, chunksize=1)
-    
+
     #prints results:
     #print("\n".join([','.join([str(item) for item in row]) for row in results]))
 
     fig = plt.figure()
     splt = fig.add_subplot(111)
-    offset = tforms.Affine2D().translate(0.5, 0)
+    #offset = tforms.Affine2D().translate(0.5, 0)
 
     dates = ["{}.{:02d}".format(x, y) for y in range(1,13) for x in ["01", "15"]]
+    dates.pop(0)
     for i in range(len(results)):
-        splt.plot(dates, results[i], label=labels[i], transform=offset)
+        splt.plot(dates, results[i], label=labels[i])
 
-    splt.legend(loc='upper center', bbox_to_anchor=(1.45, 0.8))
-    splt.xticks(rotation=90)
-    splt.xlabel("Time")
-    splt.ylabel("Occurance")
-    splt.title("Basic Trends Among Websites about CDN Providers in {}".format(str(parseyear)))
+    plt.legend(loc='upper center')
+    plt.xticks(rotation=90)
+    plt.xlabel("Time")
+    plt.ylabel("Occurance")
+    plt.title("Basic Trends Among Websites about CDN Providers in {}".format(str(parseyear)))
     #plt.set_size_inches(20, 25)
-    splt.subplots_adjust(bottom=0.3, left=0.1, right=0.6)
-    splt.savefig("btrends.png", dpi=400)
+    #splt.subplots_adjust(bottom=0.3, left=0.1, right=0.6)
+    plt.savefig("btrends.png", dpi=400)
 
 if __name__ == "__main__":
     main()
