@@ -55,6 +55,7 @@ def query(stmt):
     logger.info("Database Connection started")
     conn.set_trace_callback(callback)
 
+    logger.debug(stmt)
     dates = ["{}{:02d}{}".format(parseyear, y, x) for y in range(1,13) for x in ["01", "15"]]
     datalist = []
     for i in range(23):
@@ -65,10 +66,10 @@ def query(stmt):
 
 def main():
     stmts = [
-    "SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 0 AND b.cdn = 1 AND a.query_type = {1}".format(str(parseyear), ipv),
-    "SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 1 AND b.cdn = 0 AND a.query_type = {1}".format(str(parseyear), ipv),
-    "SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 1 AND b.cdn = 1 AND a.cname = b.cname AND a.query_type = {1}".format(str(parseyear), ipv),
-    "SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 1 AND b.cdn = 1 AND a.cname != b.cname AND a.query_type = {1}".format(str(parseyear), ipv)
+    "SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 0 AND b.cdn = 1 AND a.query_type = '{1}'".format(str(parseyear), ipv),
+    "SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 1 AND b.cdn = 0 AND a.query_type = '{1}'".format(str(parseyear), ipv),
+    "SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 1 AND b.cdn = 1 AND a.cname = b.cname AND a.query_type = '{1}'".format(str(parseyear), ipv),
+    "SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 1 AND b.cdn = 1 AND a.cname != b.cname AND a.query_type = '{1}'".format(str(parseyear), ipv)
     ]
     labels = ["In", "Out", "Stay", "Swap"]
     
@@ -94,7 +95,7 @@ def main():
     plt.title("Basic Trends Among Websites about CDN Providers in {} for {} Queries".format(str(parseyear), ipv))
     #plt.set_size_inches(20, 25)
     #splt.subplots_adjust(bottom=0.3, left=0.1, right=0.6)
-    plt.savefig("btrends.png", dpi=400)
+    plt.savefig("btrends-{}.png".format(ipv), dpi=400)
 
 if __name__ == "__main__":
     main()
