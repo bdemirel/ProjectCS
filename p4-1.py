@@ -13,7 +13,7 @@ from multiprocessing import Pool
 logger = logging.getLogger('main')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
-ch.setLevel(logging.DEBUG)
+ch.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s %(process)d %(levelname)-8s %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
@@ -53,7 +53,7 @@ def query(stmt):
         sys.exit(1)
     cursor = conn.cursor()
     logger.info("Database Connection started")
-    conn.set_trace_callback(callback)
+    #conn.set_trace_callback(callback)
 
     logger.debug(stmt)
     dates = ["{}{:02d}{}".format(parseyear, y, x) for y in range(1,13) for x in ["01", "15"]]
