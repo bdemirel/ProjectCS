@@ -70,11 +70,12 @@ def query(date):
 	cursor.execute(stmt, (date, ipv))
 	results = cursor.fetchall()
 	results = [rows[0] for rows in results]
+	logger.debug(len(results))
 	results.insert(0, date)
 	return results
 
 def main():
-	dates = ["{}{:02d}{}".format(parseyear, y, x) for y in range(1,13) for x in ["01", "15"]]
+	dates = ["{}{:02d}{}".format(parseyear, y, x) for y in range(1,3) for x in ["01", "15"]]
 
 	pool = Pool(concurrency)
 	res = pool.map(query, dates, 1)
