@@ -36,7 +36,7 @@ if not 'parseyear' in locals():
 	sys.exit(1)
 
 #DB Location (!!!Change according to device)
-dbloc = os.path.join("/data", getpass.getuser(), "{}.db".format(getpass.getuser()))
+dbloc = os.path.join("/data", getpass.getuser(), "consistent.db")
 
 def callback(stmt):
     logger.debug(stmt)
@@ -64,10 +64,17 @@ def main():
     stmts = [
     "SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 0 AND b.cdn = 1".format(str(parseyear)),
     "SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 1 AND b.cdn = 0".format(str(parseyear)),
+    #"SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 0 AND b.cdn = 0 AND a.cname = b.cname".format(str(parseyear)),
     "SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 1 AND b.cdn = 1 AND a.cname = b.cname".format(str(parseyear)),
     "SELECT COUNT(*) FROM `{0}` a INNER JOIN `{0}` b ON a.query_name = b.query_name AND a.query_type = b.query_type WHERE a.parsedate = ? AND b.parsedate = ? AND a.cdn = 1 AND b.cdn = 1 AND a.cname != b.cname".format(str(parseyear))
     ]
-    labels = ["In", "Out", "Stay", "Swap"]
+    labels = [
+        "New CDN users", 
+        "Leaving CDN users", 
+        #"non-CDN users with no change",
+        "CDN users with no change", 
+        "CDN users who swapped providers"
+    ]
     
     pool = Pool(processes=len(stmts), maxtasksperchild=1)
     results = pool.map(query, stmts, chunksize=1)
@@ -84,13 +91,13 @@ def main():
     for i in range(len(results)):
         splt.plot(dates, results[i], label=labels[i])
 
-    plt.legend(loc='upper center')
+    plt.legend(loc='center', bbox_to_anchor=(0.7, 0.75))
     plt.xticks(rotation=90)
     plt.xlabel("Time")
-    plt.ylabel("Occurance")
+    plt.ylabel("CNAME Redirections")
     plt.title("Basic Trends Among Websites about CDN Providers in {}".format(str(parseyear)))
     #plt.set_size_inches(20, 25)
-    #splt.subplots_adjust(bottom=0.3, left=0.1, right=0.6)
+    plt.subplots_adjust(bottom=0.2)
     plt.savefig("btrends.png", dpi=400)
 
 if __name__ == "__main__":

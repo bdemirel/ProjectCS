@@ -41,14 +41,14 @@ def callback(stmt):
 
 def query(domain):
     try:
-        conn = sqlite3.connect(os.path.join("/data", getpass.getuser(), "bdemirel.db"))
+        conn = sqlite3.connect(os.path.join("/data", getpass.getuser(), "consistent.db"))
     except Error as err:
         logger.error("Cannot connect to database!")
         logger.error(err)
         sys.exit(1)
     cursor = conn.cursor()
     #conn.set_trace_callback(callback)
-    stmtFetch = "SELECT COUNT(*) FROM `{}` WHERE cname LIKE ? AND parsedate = ?".format(str(parseyear))
+    stmtFetch = "SELECT COUNT(*) FROM `{}` WHERE cname LIKE ? COLLATE NOCASE AND parsedate = ?".format(str(parseyear))
 
     dates = ["{}{:02d}{}".format(parseyear, y, x) for y in range(1,13) for x in ["01", "15"]]
     datalist = []
@@ -59,7 +59,7 @@ def query(domain):
 
 def main():
     try:
-        conn = sqlite3.connect(os.path.join("/data", getpass.getuser(), "bdemirel.db"))
+        conn = sqlite3.connect(os.path.join("/data", getpass.getuser(), "consistent.db"))
     except Error as err:
         logger.error("Cannot connect to database!")
         logger.error(err)
@@ -87,10 +87,10 @@ def main():
     plt.legend(loc='upper center', bbox_to_anchor=(1.45, 0.8))
     plt.xticks(rotation=90)
     plt.xlabel("Time")
-    plt.ylabel("Occurance")
-    plt.title("{} Most Common CDN Providers in {}".format(concurrency, str(parseyear)))
+    plt.ylabel("CNAME Redirections")
+    plt.title("{} Most Popular CDN Providers in {}".format(concurrency, str(parseyear)))
     #plt.set_size_inches(20, 25)
-    plt.subplots_adjust(bottom=0.3, left=0.1, right=0.6)
+    plt.subplots_adjust(bottom=0.2, right=0.6)
     plt.savefig("mostcommon.png", dpi=400)
 
 if __name__ == "__main__":

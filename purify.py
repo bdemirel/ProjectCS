@@ -9,7 +9,7 @@ from sqlite3 import Error
 logger = logging.getLogger('main')
 logger.setLevel(logging.DEBUG)
 ch = logging.StreamHandler()
-ch.setLevel(logging.INFO)
+ch.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s %(process)d %(levelname)-8s %(message)s')
 ch.setFormatter(formatter)
 logger.addHandler(ch)
@@ -66,6 +66,7 @@ stmtParse = "INSERT INTO `cdn{0}` SELECT domain(cname), COUNT(*) FROM `{0}` WHER
 #	@param	row		= from the old db to be put into new db
 #	@param	checker	= already in the new db
 for row in oldConn.execute(stmtFetch):
+	logger.debug("i")
 	checker = newConn.execute(stmtCheck, (row['query_name'], row['query_type'], row['parsedate'])).fetchone()
 	if checker == None:
 		if row['response_type'] != "CNAME" and trimDomain(row['response_name']) != trimDomain(row['query_name']):
